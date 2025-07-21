@@ -37,7 +37,7 @@ const validateItem = [
   body('category')
     .isMongoId().withMessage('Invalid category ID format')
     .custom(async (value) => {
-      const category = await require('./models/Category').findById(value);
+      const category = await require('../models/category').findById(value);
       if (!category) throw new Error('Category not found');
       return true;
     }),

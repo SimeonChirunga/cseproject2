@@ -56,6 +56,29 @@ router.get('/categories', categoriesController.getAllCategories);
 
 router.get('/categories/:id', validateId, categoriesController.getCategoryById);
 
+
+
+/**
+ * @swagger
+ * /categories:
+ * post:
+ *   summary: Create a new category
+ *   tags: [Categories]
+ *   requestBody:
+ *     required: true
+ *     content:
+ *       application/json:
+ *         schema:
+ *           $ref: '#/components/schemas/Category'
+ *   responses:
+ *     201:
+ *       description: Category created successfully
+ *     400:
+ *       description: Invalid input
+ */
+router.post('/categories', validateCategory, categoriesController.createCategory);
+
+
 /**
  * @swagger
  * /categories/{id}:
