@@ -33,10 +33,10 @@ const generateToken = (user) => {
 };
 
 const isAuthenticated = (req, res, next) => {
+  // Check both cookies and Authorization header
   const token = req.cookies?.token || 
-               req.headers?.authorization?.split(' ')[1] || 
-               req.query?.token;
-
+               req.headers?.authorization?.split(' ')[1];
+  
   if (!token) {
     return res.status(401).json({ 
       success: false,
@@ -45,26 +45,13 @@ const isAuthenticated = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
-      algorithms: ['HS256']
-    });
-
-    req.user = {
-      id: decoded.id,
-      displayName: decoded.displayName,
-      email: decoded.email
-    };
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
     next();
   } catch (err) {
-    const message = err.name === 'TokenExpiredError' 
-      ? 'Session expired. Please login again.'
-      : 'Invalid authentication token';
-
     res.status(401).json({
       success: false,
-      message,
-      ...(process.env.NODE_ENV === 'development' && { debug: err.message })
+      message: 'Invalid or expired token'
     });
   }
 };

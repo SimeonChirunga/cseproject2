@@ -13,40 +13,25 @@ router.get('/github', passport.authenticate('github', {
 }));
 
 // GitHub OAuth Callback
-router.get('/github/callback', 
-    passport.authenticate('github', { 
-        failureRedirect: loginErrorUrl,
-        session: false,
-        failureMessage: true // Enable passing error message
-    }),
-    async (req, res) => {
-        try {
-            if (!req.user) {
-                throw new Error('Authentication failed: No user data');
-            }
-
-            const token = generateToken({
-                id: req.user._id,
-                displayName: req.user.displayName,
-                email: req.user.email
-            });
-            
-            // Secure cookie settings for production
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-                maxAge: 3600000, // 1 hour
-                domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
-            });
-            
-            // Successful authentication redirect
-            res.redirect(clientUrl);
-        } catch (error) {
-            console.error('Auth callback error:', error);
-            res.redirect(loginErrorUrl);
-        }
-    }
+router.get('/github/callback', passport.authenticate('github', { session: false }), 
+  (req, res) => {
+    const token = generateToken(req.user);
+    
+    // Set HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 3600000 // 1 hour
+    });
+    
+    // Also return token in JSON for clients that can't use cookies
+    res.json({ 
+      success: true, 
+      token, 
+      user: req.user 
+    });
+  }
 );
 
 // Explicit error handler route
