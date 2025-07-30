@@ -84,7 +84,7 @@ router.get('/', (req, res) => {
         <div class="links">
           ${!isAuthenticated 
             ? '<a href="/auth/github">Login with GitHub</a>' 
-            : '<a href="/auth/logout">Logout</a>'
+            : '<a href="https://cseproject2.onrender.com/auth/github">Logout</a>'
           }
           <a href="/api-docs">API Documentation</a>
           <a href="/api/items">View Items</a>
