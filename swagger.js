@@ -14,7 +14,7 @@ const swaggerAutogen = require('swagger-autogen')();
       url: '/api',
     },
   ],
-  schemes: ['https', 'http'],
+  schemes: ['https'],
   consumes: ['application/json'],
   produces: ['application/json'],
 
