@@ -1,81 +1,39 @@
 const swaggerAutogen = require('swagger-autogen')();
 
+const isProduction = process.env.NODE_ENV === 'production';
+const baseUrl = isProduction
+  ? process.env.BASE_URL || 'https://your-app-name.onrender.com'
+  : 'http://localhost:5000';
 
- const doc = {
+const doc = {
   info: {
     title: 'Inventory API',
     version: '1.0.0',
-    description: 'API for managing inventory categories and items',
+    description: `API for managing inventory (${isProduction ? 'Production' : 'Development'})`,
   },
-  host: process.env.SWAGGER_HOST || 'localhost:5000',
-  basePath: '/api', // This might not be necessary if you're using servers
   servers: [
     {
-      url: '/api',
-    },
+      url: `${baseUrl}/api`,
+      description: isProduction ? 'Production server' : 'Local development server'
+    }
   ],
-  schemes: ['https'],
+  schemes: isProduction ? ['https'] : ['http'],
   consumes: ['application/json'],
   produces: ['application/json'],
-
   tags: [
     { name: 'Categories', description: 'Inventory category operations' },
     { name: 'Items', description: 'Inventory item operations' }
   ],
   definitions: {
-    Category: {
-      type: 'object',
-      properties: {
-        name: {
-          type: 'string',
-          example: 'Electronics',
-          description: 'Name of the category'
-        },
-        description: {
-          type: 'string',
-          example: 'All electronic devices',
-          description: 'Description of the category'
-        }
-      }
-    },
-    Item: {
-      type: 'object',
-      properties: {
-        name: {
-          type: 'string',
-          example: 'Laptop',
-          description: 'Name of the item'
-        },
-        description: {
-          type: 'string',
-          example: 'High performance laptop',
-          description: 'Description of the item'
-        },
-        price: {
-          type: 'number',
-          example: 999.99,
-          description: 'Price of the item'
-        },
-        category: {
-          type: 'string',
-          example: '60d21b4667d0d8992e610c85',
-          description: 'ID of the category this item belongs to'
-        },
-        inStock: {
-          type: 'boolean',
-          example: true,
-          description: 'Availability status of the item'
-        }
-      }
-    }
+    // ... keep your existing definitions ...
   }
 };
 
 const outputFile = './swagger.json';
-const endpointsFiles = ['./routes/api.js']; // Path to your main route file
+const endpointsFiles = ['./routes/api.js'];
 
-// Generate swagger.json
-if (process.env.NODE_ENV !== 'production') {
+// Always generate in development, optional in production
+if (!isProduction || process.env.GENERATE_SWAGGER === 'true') {
   swaggerAutogen(outputFile, endpointsFiles, doc);
 }
 
