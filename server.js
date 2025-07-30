@@ -23,21 +23,20 @@ console.log(`Using BASE_URL: ${BASE_URL}`);  // Debug logging
 
 
 // Database connection with environment-aware settings
-mongoose.connect(
-  isProduction 
-    ? process.env.MONGODB_URI 
-    : process.env.MONGODB_URI || 'mongodb://localhost:27017/project2_dev',
-  {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    ...(isProduction && {
-      retryWrites: true,
-      w: 'majority',
-      socketTimeoutMS: 30000,
-      connectTimeoutMS: 30000
-    })
-  }
-)
+const MONGODB_URI = process.env.MONGODB_URI || 
+  (process.env.NODE_ENV === 'production'
+    ? null // Force explicit URI in production
+    : 'mongodb://localhost:27017/project2_dev');
+
+if (!MONGODB_URI) {
+  console.error('❌ No MongoDB URI configured');
+  process.exit(1);
+}
+
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: true,      // Remove if using Mongoose 6+
+  useUnifiedTopology: true    // Remove if using Mongoose 6+
+})
 .then(() => console.log('✅ Connected to MongoDB'))
 .catch(err => {
   console.error('❌ MongoDB connection error:', err.message);
