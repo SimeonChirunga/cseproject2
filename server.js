@@ -38,12 +38,20 @@ app.use(express.urlencoded({ extended: true }));
 // CORS (before session/auth)
 app.use(cors({
   origin: [
-    'http://localhost:3000',
-    'https://cseproject2.onrender.com'
+    'http://localhost:3000',       // Your frontend URL
+    'https://cseproject2.onrender.com' // Production URL
   ],
   credentials: true,
-  exposedHeaders: ['set-cookie', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization',
+    'X-Requested-With'
+  ]
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 //Session (before passport)
 app.use(session({
