@@ -45,7 +45,7 @@ app.use(cors({
 
 //Session (before passport)
 app.use(session({
-  secret: process.env.SESSION_SECRET || SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || "/FVP37nPYRgSDHeTD6zfcWDNLNobWDF1O6SgVh/4SWjL8mbhOcezuDQJjqjqwfj1uka+rdHHMRoAQB3XKncNTQ",
   resave: false,
   saveUninitialized: false,
   cookie: {
