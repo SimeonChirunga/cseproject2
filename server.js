@@ -23,26 +23,25 @@ console.log(`Using BASE_URL: ${BASE_URL}`);  // Debug logging
 
 
 // Database connection with environment-aware settings
-const MONGODB_URI = process.env.MONGODB_URI || 
-  (process.env.NODE_ENV === 'production'
-    ? null // Force explicit URI in production
-    : 'mongodb://localhost:27017/project2_dev');
+const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  console.error('❌ No MongoDB URI configured');
+  console.error('❌ FATAL: No MongoDB URI configured');
+  console.log('Production requires:');
+  console.log('1. MONGODB_URI in Render.com environment variables');
+  console.log('2. MongoDB Atlas/Render DB with IP whitelisting');
   process.exit(1);
 }
 
-mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,      // Remove if using Mongoose 6+
-  useUnifiedTopology: true    // Remove if using Mongoose 6+
-})
-.then(() => console.log('✅ Connected to MongoDB'))
-.catch(err => {
-  console.error('❌ MongoDB connection error:', err.message);
-  process.exit(1);
-});
-
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('✅ Connected to MongoDB'))
+  .catch(err => {
+    console.error('❌ MongoDB connection failed:');
+    console.error('- Verify URI format: mongodb+srv://user:pass@cluster.mongodb.net/dbname');
+    console.error('- Check IP whitelist in MongoDB provider');
+    console.error('- Test connection string with: mongosh "<URI>"');
+    process.exit(1);
+  });
 // ===== MIDDLEWARE SETUP ===== //
 app.use(cookieParser());
 app.use(express.json());
