@@ -58,44 +58,22 @@ router.get('/github', passport.authenticate('github', {
  *         description: Authentication failed
  */
 router.get('/github/callback', 
-  passport.authenticate('github', { 
-    session: false, 
-    failureRedirect: loginErrorUrl 
-  }), 
+  passport.authenticate('github', { session: false }),
   (req, res) => {
     const token = generateToken(req.user);
-    const userData = {
-      id: req.user.id,
-      email: req.user.email,
-      displayName: req.user.displayName,
-      avatar: req.user.avatar
-    };
-
-    // Set HTTP-only cookie
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-      domain: isProduction ? '.onrender.com' : undefined,
-      maxAge: 3600000 // 1 hour
-    });
     
-    // Development-friendly response
-    if (!isProduction) {
-      return res.json({
-        success: true,
-        token,
-        user: userData,
-        cookie: `Set for domain: ${isProduction ? '.onrender.com' : 'localhost'}`,
-        redirect: `${clientUrl}/dashboard`
-      });
-    }
-
-    // Production response
-    res.redirect(`${clientUrl}/dashboard`);
+    // Return JSON instead of redirecting
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: req.user.id,
+        email: req.user.email
+      },
+      docs: `${process.env.BASE_URL}/api-docs` // Link to your API docs
+    });
   }
 );
-
 /**
  * @swagger
  * /auth/login:

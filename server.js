@@ -49,16 +49,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // Enhanced CORS configuration
 app.use(cors({
-  origin: isProduction
-    ? [process.env.BASE_URL]
-    : [
-        'http://localhost:3000', // React/Vue dev server
-        'http://localhost:5000'  // Local API access
-      ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 204
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.BASE_URL // Allow only your API domain
+    : '*', // Allow all in development
+  credentials: true
 }));
 
 // Session configuration with environment-aware settings
