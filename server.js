@@ -1,4 +1,3 @@
-//require('dotenv').config();
 require('dotenv').config({ override: true });
 const express = require('express');
 const mongoose = require('mongoose');
@@ -10,110 +9,135 @@ const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/authRoutes');
 const mainRoutes = require('./routes');
 
-
 // Initialize Express app
 const app = express();
 
-// Database connection 
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);
-  });
+// Environment configuration
+const isProduction = process.env.NODE_ENV === 'production';
+const BASE_URL = isProduction 
+  ? process.env.BASE_URL || 'https://your-app.onrender.com' 
+  : process.env.BASE_URL || 'http://localhost:5000';
+
+// Database connection with environment-aware settings
+mongoose.connect(
+  isProduction 
+    ? process.env.MONGODB_URI 
+    : process.env.MONGODB_URI || 'mongodb://localhost:27017/project2_dev',
+  {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    ...(isProduction && {
+      retryWrites: true,
+      w: 'majority',
+      socketTimeoutMS: 30000,
+      connectTimeoutMS: 30000
+    })
+  }
+)
+.then(() => console.log('✅ Connected to MongoDB'))
+.catch(err => {
+  console.error('❌ MongoDB connection error:', err.message);
+  process.exit(1);
+});
 
 // ===== MIDDLEWARE SETUP ===== //
-
-
-// Parsers 
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
-
-// CORS (before session/auth)
+// Enhanced CORS configuration
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://cseproject2.onrender.com'
-  ],
+  origin: isProduction
+    ? [process.env.BASE_URL]
+    : [
+        'http://localhost:3000', // React/Vue dev server
+        'http://localhost:5000'  // Local API access
+      ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With'
-  ],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   optionsSuccessStatus: 204
 }));
 
-
-
-//Session (before passport)
+// Session configuration with environment-aware settings
 app.use(session({
-  secret: process.env.SESSION_SECRET || "/FVP37nPYRgSDHeTD6zfcWDNLNobWDF1O6SgVh/4SWjL8mbhOcezuDQJjqjqwfj1uka+rdHHMRoAQB3XKncNTQ",
+  secret: process.env.SESSION_SECRET || 'dev-secret-' + Math.random().toString(36).substring(2),
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     httpOnly: true,
-    sameSite: 'none',
-    domain: '.onrender.com',
+    sameSite: isProduction ? 'none' : 'lax',
+    domain: isProduction ? new URL(process.env.BASE_URL).hostname : undefined,
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  },
-  
+  }
 }));
 
-//  Passport (after session)
+// Passport initialization
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ===== PRODUCTION ENHANCEMENTS ===== //
+if (isProduction) {
+  // Trust proxy headers
+  app.set('trust proxy', 1);
+  
+  // HTTPS enforcement
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+
+  // Security headers
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+  });
+}
+
 // ===== ROUTES ===== //
-app.use('/', mainRoutes); // Main routes 
-app.use('/auth', authRoutes); // Authentication routes
-
-
-
-
+app.use('/', mainRoutes);
+app.use('/auth', authRoutes);
 
 // ===== ERROR HANDLING ===== //
 // 404 Handler
 app.use((req, res, next) => {
   res.status(404).json({ 
     success: false,
-    message: `Error!!!! this route does not exist: ${req.method} ${req.originalUrl}` 
+    message: `Route not found: ${req.method} ${req.origin}${req.originalUrl}`,
+    ...(!isProduction && { 
+      suggestion: `Try ${BASE_URL}/api-docs for available endpoints` 
+    })
   });
 });
 
-// error handler
+// Error handler
 app.use((err, req, res, next) => {
-  console.error('Error!!!!: ', err.stack);
+  if (!err.status) console.error('💥 Server Error:', err.stack);
   
-  const statusCode = err.status || 500;
-  const errorResponse = {
+  res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Something went wrong',
-  };
-
-  
-  if (process.env.NODE_ENV === 'development') {
-    errorResponse.stack = err.stack;
-    errorResponse.fullError = err;
-  }
-
-  res.status(statusCode).json(errorResponse);
+    message: isProduction && err.status !== 401
+      ? 'An error occurred'
+      : err.message,
+    ...(!isProduction && {
+      stack: process.env.NODE_ENV !== 'test' ? err.stack : undefined,
+      details: err.details
+    })
+  });
 });
 
-
+// Server startup
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`
+  🚀 Server running in ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'} mode
+  🔗 Base URL: ${BASE_URL}
+  📄 API Docs: ${BASE_URL}/api-docs
+  ⚙️  Environment: ${process.env.NODE_ENV || 'default'}
+  `);
 });
-
-
-

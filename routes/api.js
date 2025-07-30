@@ -5,6 +5,9 @@ const itemsController = require('../controllers/itemsController');
 const categoriesController = require('../controllers/categoriesController');
 const { isAuthenticated } = require("../middleware/authenticate");
 
+// Environment configuration
+const isProduction = process.env.NODE_ENV === 'production';
+
 /**
  * @swagger
  * tags:
@@ -13,6 +16,8 @@ const { isAuthenticated } = require("../middleware/authenticate");
  *   - name: Items
  *     description: Inventory items management
  */
+
+// ===== CATEGORY ROUTES ===== //
 
 /**
  * @swagger
@@ -29,8 +34,13 @@ const { isAuthenticated } = require("../middleware/authenticate");
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Category'
+ *       500:
+ *         description: Server error
  */
-router.get('/categories', categoriesController.getAllCategories);
+router.get('/categories', (req, res, next) => {
+  if (!isProduction) console.log('Fetching all categories');
+  categoriesController.getAllCategories(req, res, next);
+});
 
 /**
  * @swagger
@@ -53,32 +63,40 @@ router.get('/categories', categoriesController.getAllCategories);
  *               $ref: '#/components/schemas/Category'
  *       404:
  *         description: Category not found
+ *       400:
+ *         description: Invalid ID format
  */
-
-router.get('/categories/:id', validateId, categoriesController.getCategoryById);
-
-
+router.get('/categories/:id', validateId, (req, res, next) => {
+  if (!isProduction) console.log(`Fetching category with ID: ${req.params.id}`);
+  categoriesController.getCategoryById(req, res, next);
+});
 
 /**
  * @swagger
  * /categories:
- * post:
- *   summary: Create a new category
- *   tags: [Categories]
- *   requestBody:
- *     required: true
- *     content:
- *       application/json:
- *         schema:
- *           $ref: '#/components/schemas/Category'
- *   responses:
- *     201:
- *       description: Category created successfully
- *     400:
- *       description: Invalid input
+ *   post:
+ *     summary: Create a new category
+ *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CategoryInput'
+ *     responses:
+ *       201:
+ *         description: Category created successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  */
-router.post('/categories', isAuthenticated, validateCategory, categoriesController.createCategory);
-
+router.post('/categories', isAuthenticated, validateCategory, (req, res, next) => {
+  if (!isProduction) console.log('Creating new category:', req.body);
+  categoriesController.createCategory(req, res, next);
+});
 
 /**
  * @swagger
@@ -86,28 +104,34 @@ router.post('/categories', isAuthenticated, validateCategory, categoriesControll
  *   put:
  *     summary: Update a category
  *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: Category ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Category'
+ *             $ref: '#/components/schemas/CategoryInput'
  *     responses:
  *       200:
- *         description: Category updated successfully
+ *         description: Category updated
  *       400:
  *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Category not found
  */
-router.put('/categories/:id', isAuthenticated, validateId, validateCategory, categoriesController.updateCategory);
+router.put('/categories/:id', isAuthenticated, validateId, validateCategory, (req, res, next) => {
+  if (!isProduction) console.log(`Updating category ${req.params.id}:`, req.body);
+  categoriesController.updateCategory(req, res, next);
+});
 
 /**
  * @swagger
@@ -115,22 +139,30 @@ router.put('/categories/:id', isAuthenticated, validateId, validateCategory, cat
  *   delete:
  *     summary: Delete a category
  *     tags: [Categories]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: Category ID
  *     responses:
  *       204:
- *         description: Category deleted successfully
+ *         description: Category deleted
  *       400:
- *         description: Cannot delete category with items
+ *         description: Cannot delete (contains items)
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Category not found
  */
-router.delete('/categories/:id', isAuthenticated, validateId, categoriesController.deleteCategory);
+router.delete('/categories/:id', isAuthenticated, validateId, (req, res, next) => {
+  if (!isProduction) console.log(`Deleting category ${req.params.id}`);
+  categoriesController.deleteCategory(req, res, next);
+});
+
+// ===== ITEM ROUTES ===== //
 
 /**
  * @swagger
@@ -140,35 +172,23 @@ router.delete('/categories/:id', isAuthenticated, validateId, categoriesControll
  *     tags: [Items]
  *     responses:
  *       200:
- *         description: List of all items
+ *         description: List of items
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Item'
+ *       500:
+ *         description: Server error
  */
-router.get('/items', itemsController.getAllItems);
-
-/**
- * @swagger
- * /items:
- *   post:
- *     summary: Create a new item
- *     tags: [Items]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Item'
- *     responses:
- *       201:
- *         description: Item created successfully
- *       400:
- *         description: Invalid input
- */
-router.post('/items', isAuthenticated, validateItem, itemsController.createItem);
+router.get('/items', (req, res, next) => {
+  if (!isProduction) {
+    console.log('Fetching all items');
+    if (req.query.category) console.log(`Filtering by category: ${req.query.category}`);
+  }
+  itemsController.getAllItems(req, res, next);
+});
 
 /**
  * @swagger
@@ -179,21 +199,52 @@ router.post('/items', isAuthenticated, validateItem, itemsController.createItem)
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: Item ID
  *     responses:
  *       200:
- *         description: Item data
+ *         description: Item details
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Item'
  *       404:
  *         description: Item not found
+ *       400:
+ *         description: Invalid ID format
  */
-router.get('/items/:id', validateId, itemsController.getItemById);
+router.get('/items/:id', validateId, (req, res, next) => {
+  if (!isProduction) console.log(`Fetching item with ID: ${req.params.id}`);
+  itemsController.getItemById(req, res, next);
+});
+
+/**
+ * @swagger
+ * /items:
+ *   post:
+ *     summary: Create a new item
+ *     tags: [Items]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ItemInput'
+ *     responses:
+ *       201:
+ *         description: Item created
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/items', isAuthenticated, validateItem, (req, res, next) => {
+  if (!isProduction) console.log('Creating new item:', req.body);
+  itemsController.createItem(req, res, next);
+});
 
 /**
  * @swagger
@@ -201,28 +252,34 @@ router.get('/items/:id', validateId, itemsController.getItemById);
  *   put:
  *     summary: Update an item
  *     tags: [Items]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: Item ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Item'
+ *             $ref: '#/components/schemas/ItemInput'
  *     responses:
  *       200:
- *         description: Item updated successfully
+ *         description: Item updated
  *       400:
  *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Item not found
  */
-router.put('/items/:id', isAuthenticated, validateId, validateItem, itemsController.updateItem);
+router.put('/items/:id', isAuthenticated, validateId, validateItem, (req, res, next) => {
+  if (!isProduction) console.log(`Updating item ${req.params.id}:`, req.body);
+  itemsController.updateItem(req, res, next);
+});
 
 /**
  * @swagger
@@ -230,53 +287,121 @@ router.put('/items/:id', isAuthenticated, validateId, validateItem, itemsControl
  *   delete:
  *     summary: Delete an item
  *     tags: [Items]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: string
- *         required: true
- *         description: Item ID
  *     responses:
  *       204:
- *         description: Item deleted successfully
+ *         description: Item deleted
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Item not found
  */
-router.delete('/items/:id', isAuthenticated, validateId, itemsController.deleteItem);
+router.delete('/items/:id', isAuthenticated, validateId, (req, res, next) => {
+  if (!isProduction) console.log(`Deleting item ${req.params.id}`);
+  itemsController.deleteItem(req, res, next);
+});
 
 /**
  * @swagger
  * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  *   schemas:
  *     Category:
  *       type: object
  *       properties:
  *         id:
  *           type: string
- *           description: The auto-generated ID of the category
+ *           example: 63f4a1e2f5d2b3a8f7e6c5d4
  *         name:
  *           type: string
- *           description: The category name
- *       example:
- *         id: 63f4a1e2f5d2b3a8f7e6c5d4
- *         name: Electronics
+ *           example: Electronics
+ *         description:
+ *           type: string
+ *           example: Electronic devices
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     CategoryInput:
+ *       type: object
+ *       required:
+ *         - name
+ *       properties:
+ *         name:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 50
+ *           example: Electronics
+ *         description:
+ *           type: string
+ *           maxLength: 255
+ *           example: Electronic devices
  *     Item:
  *       type: object
  *       properties:
  *         id:
  *           type: string
- *           description: The auto-generated ID of the item
+ *           example: 63f4a1e2f5d2b3a8f7e6c5d5
  *         name:
  *           type: string
- *           description: The item name
- *         categoryId:
+ *           example: Smartphone
+ *         description:
  *           type: string
- *           description: The ID of the category this item belongs to
- *       example:
- *         id: 63f4a1e2f5d2b3a8f7e6c5d5
- *         name: Smartphone
- *         categoryId: 63f4a1e2f5d2b3a8f7e6c5d4
+ *           example: Latest model
+ *         price:
+ *           type: number
+ *           minimum: 0
+ *           example: 999.99
+ *         inStock:
+ *           type: boolean
+ *           example: true
+ *         category:
+ *           $ref: '#/components/schemas/Category'
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     ItemInput:
+ *       type: object
+ *       required:
+ *         - name
+ *         - price
+ *         - category
+ *       properties:
+ *         name:
+ *           type: string
+ *           minLength: 2
+ *           maxLength: 100
+ *           example: Smartphone
+ *         description:
+ *           type: string
+ *           maxLength: 500
+ *           example: Latest model
+ *         price:
+ *           type: number
+ *           minimum: 0
+ *           example: 999.99
+ *         inStock:
+ *           type: boolean
+ *           default: true
+ *         category:
+ *           type: string
+ *           example: 63f4a1e2f5d2b3a8f7e6c5d4
  */
 
 module.exports = router;
