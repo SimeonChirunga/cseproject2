@@ -64,7 +64,7 @@ app.use(cors({
 }));
 
 // Session configuration with environment-aware settings
-aapp.use(session({
+app.use(session({
   secret: process.env.SESSION_SECRET,
   cookie: {
     secure: isProduction,
