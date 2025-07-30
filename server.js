@@ -14,9 +14,13 @@ const app = express();
 
 // Environment configuration
 const isProduction = process.env.NODE_ENV === 'production';
-const BASE_URL = isProduction 
-  ? process.env.BASE_URL || 'https://your-app.onrender.com' 
-  : process.env.BASE_URL || 'http://localhost:5000';
+const BASE_URL = process.env.BASE_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? 'https://your-app-name.onrender.com'  // Default production URL
+    : 'http://localhost:5000');             // Default development URL
+
+console.log(`Using BASE_URL: ${BASE_URL}`);  // Debug logging
+
 
 // Database connection with environment-aware settings
 mongoose.connect(
@@ -60,18 +64,17 @@ app.use(cors({
 }));
 
 // Session configuration with environment-aware settings
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret-' + Math.random().toString(36).substring(2),
-  resave: false,
-  saveUninitialized: false,
+aapp.use(session({
+  secret: process.env.SESSION_SECRET,
   cookie: {
     secure: isProduction,
     httpOnly: true,
     sameSite: isProduction ? 'none' : 'lax',
-    domain: isProduction ? new URL(process.env.BASE_URL).hostname : undefined,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    domain: isProduction ? new URL(BASE_URL).hostname : undefined,  // Now safe
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
+
 
 // Passport initialization
 app.use(passport.initialize());
