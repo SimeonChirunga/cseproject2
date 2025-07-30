@@ -1,4 +1,5 @@
-require('dotenv').config();
+//require('dotenv').config();
+require('dotenv').config({ override: true });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -44,7 +45,7 @@ app.use(cors({
 
 //Session (before passport)
 app.use(session({
-  secret: process.env.SESSION_SECRET || "your_strong_session_secret",
+  secret: process.env.SESSION_SECRET || SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
