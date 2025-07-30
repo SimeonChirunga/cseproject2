@@ -3,6 +3,7 @@ const router = express.Router();
 const { validateCategory, validateItem, validateId } = require('../middleware/validator');
 const itemsController = require('../controllers/itemsController');
 const categoriesController = require('../controllers/categoriesController');
+const { isAuthenticated } = require("../middleware/authenticate");
 
 /**
  * @swagger
@@ -76,7 +77,7 @@ router.get('/categories/:id', validateId, categoriesController.getCategoryById);
  *     400:
  *       description: Invalid input
  */
-router.post('/categories', validateCategory, categoriesController.createCategory);
+router.post('/categories', isAuthenticated, validateCategory, categoriesController.createCategory);
 
 
 /**
@@ -106,7 +107,7 @@ router.post('/categories', validateCategory, categoriesController.createCategory
  *       404:
  *         description: Category not found
  */
-router.put('/categories/:id', validateId, validateCategory, categoriesController.updateCategory);
+router.put('/categories/:id', isAuthenticated, validateId, validateCategory, categoriesController.updateCategory);
 
 /**
  * @swagger
@@ -129,7 +130,7 @@ router.put('/categories/:id', validateId, validateCategory, categoriesController
  *       404:
  *         description: Category not found
  */
-router.delete('/categories/:id', validateId, categoriesController.deleteCategory);
+router.delete('/categories/:id', isAuthenticated, validateId, categoriesController.deleteCategory);
 
 /**
  * @swagger
@@ -167,7 +168,7 @@ router.get('/items', itemsController.getAllItems);
  *       400:
  *         description: Invalid input
  */
-router.post('/items', validateItem, itemsController.createItem);
+router.post('/items', isAuthenticated, validateItem, itemsController.createItem);
 
 /**
  * @swagger
@@ -221,7 +222,7 @@ router.get('/items/:id', validateId, itemsController.getItemById);
  *       404:
  *         description: Item not found
  */
-router.put('/items/:id', validateId, validateItem, itemsController.updateItem);
+router.put('/items/:id', isAuthenticated, validateId, validateItem, itemsController.updateItem);
 
 /**
  * @swagger
@@ -242,7 +243,7 @@ router.put('/items/:id', validateId, validateItem, itemsController.updateItem);
  *       404:
  *         description: Item not found
  */
-router.delete('/items/:id', validateId, itemsController.deleteItem);
+router.delete('/items/:id', isAuthenticated, validateId, itemsController.deleteItem);
 
 /**
  * @swagger

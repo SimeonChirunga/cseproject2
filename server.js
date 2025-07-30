@@ -2,32 +2,106 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const passport = require('./config/passport');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
 
+const authRoutes = require('./routes/authRoutes');
+const mainRoutes = require('./routes');
+
+
+// Initialize Express app
 const app = express();
 
-// Database connection
-mongoose.connect(process.env.MONGODB_URI)
+// Database connection 
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
   .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => {
+    console.error('MongoDB connection error:', err.message);
+    process.exit(1);
+  });
 
-// Middleware
-app.use(cors());
+// ===== MIDDLEWARE SETUP ===== //
+
+
+// Parsers 
+app.use(cookieParser());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/', require('./routes'));
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Something went wrong',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+
+// CORS (before session/auth)
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+//Session (before passport)
+app.use(session({
+  secret: process.env.SESSION_SECRET || "your_strong_session_secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  },
+  
+}));
+
+//  Passport (after session)
+app.use(passport.initialize());
+app.use(passport.session());
+
+// ===== ROUTES ===== //
+app.use('/', mainRoutes); // Main routes 
+app.use('/auth', authRoutes); // Authentication routes
+
+
+
+
+
+// ===== ERROR HANDLING ===== //
+// 404 Handler
+app.use((req, res, next) => {
+  res.status(404).json({ 
+    success: false,
+    message: `Error!!!! this route does not exist: ${req.method} ${req.originalUrl}` 
   });
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`API Documentation: http://localhost:${PORT}/api-docs`);
+// error handler
+app.use((err, req, res, next) => {
+  console.error('Error!!!!: ', err.stack);
+  
+  const statusCode = err.status || 500;
+  const errorResponse = {
+    success: false,
+    message: err.message || 'Something went wrong',
+  };
+
+  
+  if (process.env.NODE_ENV === 'development') {
+    errorResponse.stack = err.stack;
+    errorResponse.fullError = err;
+  }
+
+  res.status(statusCode).json(errorResponse);
 });
+
+
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  
+});
+
+
+
