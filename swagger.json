@@ -3,651 +3,343 @@
   "info": {
     "title": "Inventory API",
     "version": "1.0.0",
-    "description": "API for managing inventory (Production)"
-  },
-  "host": "localhost:3000",
-  "servers": [
-    {
-      "url": "https://your-app-name.onrender.com",
-      "description": "Production server"
+    "description": "API for managing inventory",
+    "contact": {
+      "email": "simeonchirunga@gmail.com"
     }
-  ],
-  "basePath": "/",
+  },
+  "host": "cseproject2.onrender.com",
+  "basePath": "/api",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "securityDefinitions": {
+    "OAuth2": {
+      "type": "oauth2",
+      "flow": "accessCode",
+      "authorizationUrl": "https://github.com/login/oauth/authorize",
+      "tokenUrl": "https://github.com/login/oauth/access_token",
+      "scopes": {
+        "read:inventory": "Read access to inventory",
+        "write:inventory": "Write access to inventory"
+      }
+    }
+  },
   "tags": [
     {
       "name": "Categories",
-      "description": "Inventory category operations"
+      "description": "Operations with inventory categories"
     },
     {
       "name": "Items",
-      "description": "Inventory item operations"
+      "description": "Operations with inventory items"
+    },
+    {
+      "name": "Authentication",
+      "description": "Login/logout operations"
     }
-  ],
-  "schemes": [
-    "https"
-  ],
-  "consumes": [
-    "application/json"
-  ],
-  "produces": [
-    "application/json"
   ],
   "paths": {
     "/categories": {
       "get": {
-        "description": "",
+        "tags": ["Categories"],
+        "summary": "Get all categories",
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Successful operation",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Category"
+              }
+            }
           }
-        }
+        },
+        "security": [{"OAuth2": ["read:inventory"]}]
       },
       "post": {
-        "description": "",
+        "tags": ["Categories"],
+        "summary": "Create a new category",
         "parameters": [
           {
             "name": "body",
             "in": "body",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/Category"
             }
           }
         ],
         "responses": {
           "201": {
-            "description": "Created"
+            "description": "Category created",
+            "schema": {
+              "$ref": "#/definitions/Category"
+            }
           },
           "400": {
-            "description": "Bad Request"
+            "description": "Invalid input"
           },
           "401": {
             "description": "Unauthorized"
           }
-        }
+        },
+        "security": [{"OAuth2": ["write:inventory"]}]
       }
     },
     "/categories/{id}": {
       "get": {
-        "description": "",
+        "tags": ["Categories"],
+        "summary": "Get category by ID",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "format": "objectid",
+            "description": "ID of the category to return"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Successful operation",
+            "schema": {
+              "$ref": "#/definitions/Category"
+            }
           },
           "404": {
-            "description": "Not Found"
+            "description": "Category not found"
           }
-        }
+        },
+        "security": [{"OAuth2": ["read:inventory"]}]
       },
       "put": {
-        "description": "",
+        "tags": ["Categories"],
+        "summary": "Update an existing category",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "format": "objectid"
           },
           {
             "name": "body",
             "in": "body",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/Category"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Category updated",
+            "schema": {
+              "$ref": "#/definitions/Category"
+            }
           },
           "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
+            "description": "Invalid input"
           },
           "404": {
-            "description": "Not Found"
+            "description": "Category not found"
           }
-        }
+        },
+        "security": [{"OAuth2": ["write:inventory"]}]
       },
       "delete": {
-        "description": "",
+        "tags": ["Categories"],
+        "summary": "Delete a category",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "format": "objectid"
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
+          "204": {
+            "description": "Category deleted"
           },
           "404": {
-            "description": "Not Found"
+            "description": "Category not found"
           }
-        }
+        },
+        "security": [{"OAuth2": ["write:inventory"]}]
       }
     },
     "/items": {
       "get": {
-        "description": "",
+        "tags": ["Items"],
+        "summary": "Get all items",
         "parameters": [
           {
             "name": "category",
             "in": "query",
-            "type": "string"
+            "type": "string",
+            "format": "objectid",
+            "description": "Filter items by category ID"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Successful operation",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Item"
+              }
+            }
           }
-        }
+        },
+        "security": [{"OAuth2": ["read:inventory"]}]
       },
       "post": {
-        "description": "",
+        "tags": ["Items"],
+        "summary": "Create a new item",
         "parameters": [
           {
             "name": "body",
             "in": "body",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                },
-                "price": {
-                  "example": "any"
-                },
-                "category": {
-                  "example": "any"
-                },
-                "stock": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/Item"
             }
           }
         ],
         "responses": {
           "201": {
-            "description": "Created"
+            "description": "Item created",
+            "schema": {
+              "$ref": "#/definitions/Item"
+            }
           },
           "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
+            "description": "Invalid input"
           }
-        }
+        },
+        "security": [{"OAuth2": ["write:inventory"]}]
       }
     },
     "/items/{id}": {
       "get": {
-        "description": "",
+        "tags": ["Items"],
+        "summary": "Get item by ID",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "format": "objectid"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Successful operation",
+            "schema": {
+              "$ref": "#/definitions/Item"
+            }
           },
           "404": {
-            "description": "Not Found"
+            "description": "Item not found"
           }
-        }
+        },
+        "security": [{"OAuth2": ["read:inventory"]}]
       },
       "put": {
-        "description": "",
+        "tags": ["Items"],
+        "summary": "Update an existing item",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "format": "objectid"
           },
           {
             "name": "body",
             "in": "body",
+            "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                },
-                "price": {
-                  "example": "any"
-                },
-                "category": {
-                  "example": "any"
-                },
-                "stock": {
-                  "example": "any"
-                }
-              }
+              "$ref": "#/definitions/Item"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Item updated",
+            "schema": {
+              "$ref": "#/definitions/Item"
+            }
           },
           "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
+            "description": "Invalid input"
           },
           "404": {
-            "description": "Not Found"
+            "description": "Item not found"
           }
-        }
+        },
+        "security": [{"OAuth2": ["write:inventory"]}]
       },
       "delete": {
-        "description": "",
+        "tags": ["Items"],
+        "summary": "Delete an item",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
-            "type": "string"
+            "type": "string",
+            "format": "objectid"
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
+          "204": {
+            "description": "Item deleted"
           },
           "404": {
-            "description": "Not Found"
+            "description": "Item not found"
+          }
+        },
+        "security": [{"OAuth2": ["write:inventory"]}]
+      }
+    },
+    "/auth/github": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate with GitHub",
+        "responses": {
+          "302": {
+            "description": "Redirect to GitHub for authentication"
           }
         }
       }
     },
-    "/github": {
+    "/auth/github/callback": {
       "get": {
-        "description": "",
+        "tags": ["Authentication"],
+        "summary": "GitHub authentication callback",
         "responses": {
-          "default": {
-            "description": ""
+          "302": {
+            "description": "Redirect after authentication"
           }
         }
       }
     },
-    "/github/callback": {
+    "/auth/logout": {
       "get": {
-        "description": "",
+        "tags": ["Authentication"],
+        "summary": "Logout current user",
         "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/login": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "error",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/logout": {
-      "get": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api-docs": {
-      "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/": {
-      "get": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/categories": {
-      "get": {
-        "description": "",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/categories/{id}": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      },
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      },
-      "delete": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/items": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "category",
-            "in": "query",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                },
-                "price": {
-                  "example": "any"
-                },
-                "category": {
-                  "example": "any"
-                },
-                "stock": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/api/items/{id}": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      },
-      "put": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "example": "any"
-                },
-                "description": {
-                  "example": "any"
-                },
-                "price": {
-                  "example": "any"
-                },
-                "category": {
-                  "example": "any"
-                },
-                "stock": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      },
-      "delete": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "404": {
-            "description": "Not Found"
+          "302": {
+            "description": "Redirect after logout"
           }
         }
       }
@@ -656,96 +348,87 @@
   "definitions": {
     "Category": {
       "type": "object",
+      "required": ["name"],
       "properties": {
-        "type": {
+        "id": {
           "type": "string",
-          "example": "object"
+          "format": "objectid",
+          "readOnly": true
         },
-        "properties": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "example": "string"
-                },
-                "example": {
-                  "type": "string",
-                  "example": "Electronics"
-                }
-              }
-            },
-            "description": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "example": "string"
-                },
-                "example": {
-                  "type": "string",
-                  "example": "All electronic devices"
-                }
-              }
-            }
-          }
+        "name": {
+          "type": "string",
+          "example": "Electronics",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "example": "All electronic devices",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
         }
       }
     },
     "Item": {
       "type": "object",
+      "required": ["name", "price", "category"],
       "properties": {
-        "type": {
+        "id": {
           "type": "string",
-          "example": "object"
+          "format": "objectid",
+          "readOnly": true
         },
-        "properties": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "example": "string"
-                },
-                "example": {
-                  "type": "string",
-                  "example": "Laptop"
-                }
-              }
-            },
-            "price": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "example": "number"
-                },
-                "example": {
-                  "type": "number",
-                  "example": 999.99
-                }
-              }
-            },
-            "category": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "example": "string"
-                },
-                "example": {
-                  "type": "string",
-                  "example": "64d21b4667d0d8992e610c85"
-                }
-              }
-            }
-          }
+        "name": {
+          "type": "string",
+          "example": "Laptop",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "example": "High performance laptop",
+          "maxLength": 1000
+        },
+        "price": {
+          "type": "number",
+          "format": "float",
+          "minimum": 0,
+          "example": 999.99
+        },
+        "category": {
+          "type": "string",
+          "format": "objectid",
+          "example": "64d21b4667d0d8992e610c85"
+        },
+        "stock": {
+          "type": "integer",
+          "minimum": 0,
+          "example": 10
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
         }
       }
     }
+  },
+  "externalDocs": {
+    "description": "Find more info here",
+    "url": "https://docs.your-api.com"
   }
 }
