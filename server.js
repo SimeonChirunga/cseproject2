@@ -6,6 +6,7 @@ const passport = require('./config/passport');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 
+const mainRoutes = require('./routes/index');
 const authRoutes = require('./routes/authRoutes');
 const apiRoutes = require('./routes/api');
 const docsRoutes = require('./routes/swagger');
@@ -67,17 +68,12 @@ if (isProduction) {
 }
 
 // Routes
+app.use('/', mainRoutes);
 app.use('/api', apiRoutes);
 app.use('/auth', authRoutes);
 app.use('/api-docs', docsRoutes);
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-  });
-});
+
 
 // Error handling
 app.use((req, res) => {
