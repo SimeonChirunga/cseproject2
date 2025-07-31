@@ -1,13 +1,12 @@
 const router = require('express').Router();
 const passport = require('passport');
-const { generateToken } = require('../middleware/authenticate');
+const { generateToken, handleCallback, logout } = require('../middleware/auth');
+const { isProduction } = require('../config/env');
 
 // Environment configuration
-const isProduction = process.env.NODE_ENV === 'production';
 const clientUrl = isProduction 
-  ? process.env.CLIENT_URL || 'https://your-frontend.onrender.com'
+  ? process.env.CLIENT_URL || 'https://cseproject2.onrender.com'
   : 'http://localhost:3000';
-const loginErrorUrl = `${clientUrl}/login?error=auth_failed`;
 
 /**
  * @swagger
@@ -25,11 +24,12 @@ const loginErrorUrl = `${clientUrl}/login?error=auth_failed`;
  *     responses:
  *       302:
  *         description: Redirect to GitHub for authentication
+ *       500:
+ *         description: Server error
  */
 router.get('/github', passport.authenticate('github', { 
   scope: ['user:email'],
-  session: false,
-  failureRedirect: loginErrorUrl
+  session: false
 }));
 
 /**
@@ -53,32 +53,25 @@ router.get('/github', passport.authenticate('github', {
  *                 user:
  *                   $ref: '#/components/schemas/User'
  *       302:
- *         description: Redirect on failure
+ *         description: Redirect to client with token
  *       401:
  *         description: Authentication failed
+ *       500:
+ *         description: Server error
  */
 router.get('/github/callback', 
-  passport.authenticate('github', { session: false }),
-  (req, res) => {
-    const token = generateToken(req.user);
-    
-    // Return JSON instead of redirecting
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: req.user.id,
-        email: req.user.email
-      },
-      docs: `${process.env.BASE_URL}/api-docs` // Link to your API docs
-    });
-  }
+  passport.authenticate('github', { 
+    session: false,
+    failureRedirect: `${clientUrl}/login?error=auth_failed`
+  }),
+  handleCallback
 );
+
 /**
  * @swagger
  * /auth/login:
  *   get:
- *     summary: Login error handler
+ *     summary: Login status endpoint
  *     tags: [Authentication]
  *     parameters:
  *       - in: query
@@ -87,25 +80,36 @@ router.get('/github/callback',
  *           type: string
  *     responses:
  *       200:
- *         description: Login page
+ *         description: Login information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 authenticated:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
  *       401:
  *         description: Authentication error
  */
 router.get('/login', (req, res) => {
   const { error } = req.query;
   
-  if (error === 'auth_failed') {
+  if (error) {
     return res.status(401).json({ 
       success: false,
       message: 'Authentication failed',
-      ...(!isProduction && {
-        debug: 'GitHub OAuth returned an error',
-        solution: 'Check your GitHub OAuth configuration'
-      })
+      error: error === 'auth_failed' ? 'GitHub authentication failed' : error,
+      authUrl: '/auth/github'
     });
   }
   
-  res.redirect(clientUrl);
+  res.json({
+    authenticated: false,
+    message: 'Visit /auth/github to authenticate',
+    authUrl: '/auth/github'
+  });
 });
 
 /**
@@ -115,26 +119,61 @@ router.get('/login', (req, res) => {
  *     summary: Logout user
  *     tags: [Authentication]
  *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
  *       302:
- *         description: Redirect to home after clearing session
+ *         description: Redirect to client after logout
  */
-router.get('/logout', (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    domain: isProduction ? '.onrender.com' : undefined
-  });
+router.get('/logout', logout);
 
-  if (!isProduction) {
-    return res.json({
-      success: true,
-      message: 'Token cookie cleared',
-      redirect: clientUrl
+/**
+ * @swagger
+ * /auth/verify:
+ *   get:
+ *     summary: Verify authentication status
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Verification successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 authenticated:
+ *                   type: boolean
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Not authenticated
+ */
+router.get('/verify', (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ 
+      authenticated: false,
+      message: 'Not authenticated' 
     });
   }
-
-  res.redirect(clientUrl);
+  
+  res.json({
+    authenticated: true,
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      displayName: req.user.displayName
+    }
+  });
 });
 
 /**
@@ -146,11 +185,26 @@ router.get('/logout', (req, res) => {
  *       properties:
  *         id:
  *           type: string
+ *           format: objectid
+ *           example: 507f1f77bcf86cd799439011
  *         email:
  *           type: string
+ *           format: email
+ *           example: user@example.com
  *         displayName:
  *           type: string
+ *           example: John Doe
+ *         githubId:
+ *           type: string
+ *           example: 123456789
  *         avatar:
  *           type: string
+ *           format: uri
+ *           example: https://avatars.githubusercontent.com/u/123456789
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  */
 module.exports = router;

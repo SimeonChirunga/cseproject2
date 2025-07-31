@@ -6,133 +6,97 @@ const passport = require('./config/passport');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 
-const authRoutes = require('./routes/authRoutes');
-const mainRoutes = require('./routes');
+const authRoutes = require('./routes/auth');
+const apiRoutes = require('./routes/api');
+const docsRoutes = require('./routes/docs');
 
-// Initialize Express app
+// Initialize Express
 const app = express();
 
-// Environment configuration
+// Environment config
 const isProduction = process.env.NODE_ENV === 'production';
 const BASE_URL = process.env.BASE_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? 'https://your-app-name.onrender.com'  // Default production URL
-    : 'http://localhost:5000');             // Default development URL
+  (isProduction ? 'https://cseproject2.onrender.com' : 'http://localhost:5000');
 
-console.log(`Using BASE_URL: ${BASE_URL}`);  // Debug logging
+// Database connection
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/inventory', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('✅ MongoDB connected'))
+.catch(err => console.error('❌ MongoDB connection error:', err));
 
-
-// Database connection with environment-aware settings
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-  console.error('❌ FATAL: No MongoDB URI configured');
-  console.log('Production requires:');
-  console.log('1. MONGODB_URI in Render.com environment variables');
-  console.log('2. MongoDB Atlas/Render DB with IP whitelisting');
-  process.exit(1);
-}
-
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => {
-    console.error('❌ MongoDB connection failed:');
-    console.error('- Verify URI format: mongodb+srv://user:pass@cluster.mongodb.net/dbname');
-    console.error('- Check IP whitelist in MongoDB provider');
-    console.error('- Test connection string with: mongosh "<URI>"');
-    process.exit(1);
-  });
-// ===== MIDDLEWARE SETUP ===== //
-app.use(cookieParser());
+// Core middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// Enhanced CORS configuration
+// CORS configuration
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.BASE_URL // Allow only your API domain
-    : '*', // Allow all in development
+  origin: isProduction ? BASE_URL : 'http://localhost:3000',
   credentials: true
 }));
 
-// Session configuration with environment-aware settings
+// Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
   cookie: {
     secure: isProduction,
     httpOnly: true,
     sameSite: isProduction ? 'none' : 'lax',
-    domain: isProduction ? new URL(BASE_URL).hostname : undefined,  // Now safe
-    maxAge: 24 * 60 * 60 * 1000
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
-
 
 // Passport initialization
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ===== PRODUCTION ENHANCEMENTS ===== //
+// Production settings
 if (isProduction) {
-  // Trust proxy headers
   app.set('trust proxy', 1);
   
-  // HTTPS enforcement
-  app.use((req, res, next) => {
-    if (req.headers['x-forwarded-proto'] !== 'https') {
-      return res.redirect(301, `https://${req.headers.host}${req.url}`);
-    }
-    next();
-  });
-
-  // Security headers
+  // Basic security headers without Helmet
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
     next();
   });
 }
 
-// ===== ROUTES ===== //
-app.use('/', mainRoutes);
+// Routes
+app.use('/api', apiRoutes);
 app.use('/auth', authRoutes);
+app.use('/api-docs', docsRoutes);
 
-// ===== ERROR HANDLING ===== //
-// 404 Handler
-app.use((req, res, next) => {
-  res.status(404).json({ 
-    success: false,
-    message: `Route not found: ${req.method} ${req.origin}${req.originalUrl}`,
-    ...(!isProduction && { 
-      suggestion: `Try ${BASE_URL}/api-docs for available endpoints` 
-    })
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
 
-// Error handler
+// Error handling
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
 app.use((err, req, res, next) => {
-  if (!err.status) console.error('💥 Server Error:', err.stack);
-  
-  res.status(err.status || 500).json({
-    success: false,
-    message: isProduction && err.status !== 401
-      ? 'An error occurred'
-      : err.message,
-    ...(!isProduction && {
-      stack: process.env.NODE_ENV !== 'test' ? err.stack : undefined,
-      details: err.details
-    })
+  console.error(err.stack);
+  res.status(500).json({ 
+    error: isProduction ? 'Server error' : err.message 
   });
 });
 
-// Server startup
+// Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, () => {
   console.log(`
-  🚀 Server running in ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'} mode
-  🔗 Base URL: ${BASE_URL}
-  📄 API Docs: ${BASE_URL}/api-docs
-  ⚙️  Environment: ${process.env.NODE_ENV || 'default'}
+  Server running in ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}
+  ➡️  Base URL: ${BASE_URL}
+  📅 Started: ${new Date().toLocaleString()}
   `);
 });
