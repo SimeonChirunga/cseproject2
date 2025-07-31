@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const passport = require('passport');
 const { generateToken, handleCallback, logout } = require('../middleware/authenticate');
-const { isProduction } = require('../config/env');
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Environment configuration
 const clientUrl = isProduction 
