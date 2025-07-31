@@ -6,9 +6,9 @@ const passport = require('./config/passport');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 
-const authRoutes = require('./routes/auth');
+const authRoutes = require('./routes/authRoutes');
 const apiRoutes = require('./routes/api');
-const docsRoutes = require('./routes/docs');
+const docsRoutes = require('./routes/swagger');
 
 // Initialize Express
 const app = express();
